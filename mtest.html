@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<head>
+<title></title>
+<script src="../js/jquery-1.6.2.min.js"></script>
+<script src="../js/gl-matrix-min.js"></script>
+<script src="./marbles.js"></script>
+<script src="./mbutils.js"></script>
+<script type="text/javascript">
+"use strict";
+window.requestAnimationFrame = 
+    window.requestAnimationFrame || 
+    window.mozRequestAnimationFrame ||  
+    window.webkitRequestAnimationFrame || 
+    window.msRequestAnimationFrame;
+window.URL = window.URL ||
+             window.webkitURL
+if (typeof Object.create !== 'function') {
+    Object.create = function (o) {
+        var F = function() {};
+        F.prototype = o;
+        return new F();
+    }
+}
+var dbg = {};
+var conf = {};
+var Multifinish = function() {
+    var count = null;
+    var cb;
+    return {
+        split: function() {
+            if (count === null)
+                count = 0;
+            count++;
+            return function() {
+                count--;
+                if (count == 0 && cb)
+                    cb();
+            }
+        },
+        // Call me after a split();
+        setCallback: function(ncb) {
+            cb = ncb
+            if (count == 0)
+                cb();
+        }
+    }
+}
+var conf;
+$(document).ready(function(e) {
+    var metaConf = {
+        "type": "root",
+        "variables": {
+            "mvMatrixTranslate" : {
+                "type": "compound",
+                "variables": {
+                    "X":    {
+                        "type":    "float",
+                         "dflt":    -30},
+                    "Y":    {
+                        "type":    "float",
+                        "dflt":    -30},
+                    "Z":    {
+                        "type":    "float",
+                        "dflt":    -30},
+                }
+            },
+            "mvMatrixRotate" : {
+                "type": "compound",
+                "variables": {
+                    "Pitch": {
+                        "type":"float",
+                        "dflt": 0.75,
+                    },
+                    "Yaw": {
+                        "type":"float",
+                        "dflt": -0.12,
+                    }
+                }
+            },
+            "cursor": {
+                "type": "compound",
+                "variables": {
+                    "translate": {
+                        "type": "compound",
+                        "variables": {
+                            "X": {
+                                "type":"int",
+                                "dflt": 0,
+                                "min": 0,
+
+                                "max": 15,
+                                "step": 1
+                            },
+                            "Y": {
+                                "type":"int",
+                                "dflt": 0,
+                                "min": 0,
+                                "max": 15,
+                                "step": 1
+                            }, 
+                            "Z": {
+                                "type":"int",
+                                "dflt": 0,
+                                "min": 0,
+                                "max": 15,
+                                "step": 1
+                            }
+                        }
+                    },
+                    "color": {
+                        "type": "compound",
+                        "variables": {
+                            "R": {
+                                "type":"int",
+                                "dflt": 0,
+                                "min": 0,
+                                "max": 15,
+                                "step": 1
+                            },
+                            "G": {
+                                "type":"int",
+                                "dflt": 15,
+                                "min": 0,
+                                "max": 15,
+                                "step": 1
+                            },
+                            "B": {
+                                "type":"int",
+                                "dflt": 15,
+                                "min": 0,
+                                "max": 15,
+                                "step": 1
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    };
+    var controls = [{
+        "type": "Knob",
+        "property": "mvMatrixTranslate.X",
+        "desc": {
+        }
+    },{
+        "type": "Knob",
+        "property": "mvMatrixTranslate.Y",
+        "desc": {
+        }
+    },{
+        "type": "Knob", 
+        "property": "mvMatrixTranslate.Z",
+        "desc": {
+        }
+    }];
+    conf = o.mkNode(metaConf);
+    controls.forEach(function(conDesc) {
+        console.log("dealing with", conDesc);
+        var treeStack = conDesc.property.split(".").reverse();
+        var prop = conf;
+        while(treeStack.length >= 1) {
+            prop = prop()[treeStack.pop()];
+        };
+        var obj;
+        obj = oU["mk" + conDesc.type](conDesc.desc);
+        $conCon.append(obj.element);
+        o.connect(obj.node, prop, {
+            "a-b": function(a) {
+                return (a);
+            },
+            "b-a": function(b) {
+                return b;
+            }
+        })
+    });
+    $conCon.addClass("debug").appendTo("#everything");
+});
+$(document)
+</script>
+</head>
+<style type="text/css">
+body {
+    background-color: #0f0;
+    color: #0f0;
+    margin: 0;
+    text-align: center;
+}
+
+.scrollWheelSelected {
+    border: 2px solid red;
+}
+
+.debug {
+}
+
+.container {
+    width: 100%;
+    height: 100%;
+    background-color: #333;
+}
+
+#everything {
+    padding-bottom: 300px;
+    padding-top: 300px;
+}
+</style>
+<body>
+<div id="everything" class="container">
+.THE WAY OF THE FUTURE.
+</div>
+</body>
+</html>
