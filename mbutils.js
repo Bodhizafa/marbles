@@ -24,7 +24,7 @@ var conMetaConf = {
     }
 }
 var conConf = o.mkNode(conMetaConf);
-var SVGDoc = document.ownerDocument;
+var SVGDoc = document;
 var svgns = "http://www.w3.org/2000/svg";
 // translate a JSON tree to an SVG DOM element tree
 var mkSVGEl = function mkSVGEl (kwargs) {
@@ -79,7 +79,7 @@ return {
                     "font-size": 7./32+"px",
                     "fill": "#0cc"
                 },
-                "contents": prop.dflt
+                "contents": desc.dflt
             },{
                 "element": "g",
                 "attributes": {
@@ -112,6 +112,8 @@ return {
                 }]
             }]
         });
+        var marble = o.mkNode(desc);
+
         var knob = svg.getElementsByClassName("knob_head")[0];
         var valueText = svg.getElementsByClassName("value")[0];
         (function() {

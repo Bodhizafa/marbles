@@ -1,14 +1,4 @@
 "use strict";
-if (typeof Object.prototype.keys !== 'function') {
-    Object.prototype.keys = function() {
-        return Object.keys(this);
-    };
-} else {
-    consol.log("not adding keys");
-}
-if (dbg !== undefined) {
-    var dbg;
-}
 //    ____ ___  _   _ _____
 //   / ___/ _ \| \ | |  ___|
 //  | |  | | | |  \| | |_
@@ -39,103 +29,54 @@ var numberClamperMaker = function(node) {
     }
 };
 
-var nodeMuxerData = {
-    "clampers": {
-        "float": numberClamperMaker,
-        "int": numberClamperMaker,
-    },
-    "constraints": {
-        "float": {
-            "max": "Maximum allowed value",
-            "min": "Minimum allowed value"
-        },
-        "int": {
-            "max": "Maximum allowed value",
-            "min": "Minimum allowed value"
-        },
-        "compound": {},
-        "root": {}
+var mkRawChannel = function(nodeDesc, reader, writer) {
+    // XXX - haven't tested passing this writer == undefined. If it crashes, fix it.
+    var sieve = {}; // Don't give a FUCK
+    var newNode;
+    if (reader && writer) {
+        newNode = function(val) {
+            if (val === undefined) {
+                return reader();
+            } else {
+                return writer(val);
+            }
+        }
+    } else if (reader) {
+        newNode = function(val) {
+            if (val === undefined) {
+                return reader();
+            } else {
+                throw "Can't write from read only marble";
+            }
+        };
+    } else if (writer) {
+        newNode = function(val) { 
+            if (val === undefined) {
+                throw "Can't read from write only marble";
+            } else {
+                return writer(val);
+            }
+        }
     }
-};
+    return newNode;
+}
 
 return {
-    // returns a conf node based on node from the metaConf variables section
-    "mkNode":function makeConfNode(node, pos) {
-        // sanitize
-        if (pos === undefined) {
-            var pos = "";
-        }
-        if (typeof(node.type) !== "string") {
-            // XXX - does this work?
-            throw TypeError("node type is not a string", node);
-        }
-        //begin
-        var nodeVal;
+    "mkChannel":        function(nodeDesc, reader, writer) {
         var listeners = [];
-        var newNode;
-        if (node.type === "root" || node.type === "compound") {
-            // If we're a compound node, recurse down "variables"
-            nodeVal = {};
-            node.variables.keys().forEach(function(nodeKey) {
-                nodeVal[nodeKey] = makeConfNode(node.variables[nodeKey], pos + "." + nodeKey);
+        var sieve = {
+            "type":     "Node type"
+        };
+        var desc = nodeDesc.sieve(sieve);
+        var newNode = mkRawChannel(desc, reader, function(val) {
+            listeners.forEach(function(listener) {
+                if (listener !== undefined) {
+                    writer(listener(nodeVal, val, newNode));
+                }
             });
-            newNode = function(val) {
-                if (val !== undefined) {
-                    throw TypeError("Can't write to compound properties");
-                }
-                return nodeVal;
-            }
-        } else {
-            var clamper = nodeMuxerData.clampers[node.type](node);
-            if (node.dir === "source") {
-                newNode = function() {
-                    if (arguments.length > 0) {
-                        throw TypeError("Can't write marble source");
-                    } else {
-                        return nodeVal;
-                    }
-                }
-            } else if (node.dir === "sink") {
-                newNode = function() {
-                    if (arguments.length == 0) {
-                        throw TypeError("Can't read marble sink");
-                    } else {
-                        var newVal = clamper(val);
-                        listeners.forEach(function(listener) {
-                            if (listener !== undefined) {
-                                listener(newVal, val, newNode);
-                            }
-                        });
-                    }
-                }
-            } else {
-                node.dir = "channel";
-                newNode = function(val) {
-                    if (val === undefined) {
-                        return nodeVal;
-                    } else {
-                        nodeVal = clamper(val);
-                        listeners.forEach(function(listener) {
-                            if (listener !== undefined) {
-                                // listener gets new value, value asked for by setter and node config
-                                listener(nodeVal, val, newNode);
-                            }
-                        });
-                        return nodeVal;
-                    }
-                }
-            }
-            nodeVal = node.dflt;
-        }
-        // pass through constraints as read-only subproperties
-        nodeMuxerData.constraints[node.type].keys().forEach(function(propName) {
-            var consVal = node[propName]; // XXX do I need to do this?
-            newNode[propName] = function(arg) {
-                if (arg) throw TypeError("Attempt to write read-only metaconf subproperty");
-                return consVal;
-            }
+            return writer(val);
         });
-        // Listener management
+        newNode.desc = desc;
         newNode.registerListener = function(listener) {
             var lno = listeners.length;
             listeners[lno] = listener;
@@ -144,11 +85,62 @@ return {
         newNode.dropListener = function(lno) {
             listeners[lno] = undefined;
         }
-        newNode.treePos = pos;
-        newNode.dflt = node.dflt;
+        newNode.desc = nodeDesc
         return newNode;
     },
-    "connect": function(a, b, wire) {
+    "mkFloatNode":     function(nodeDesc) {
+        var sieve = {
+            "max"   :   "Maximum value the node can hold",
+            "min"   :   "Minumum value the node can hold",
+            "dflt"  :   "Default value",
+        }
+        var desc = nodeDesc.sieve(sieve);
+        // Node closure
+        var newNode = (function() {
+            var nodeVal = nodeDesc.dflt;
+            var clamper = numberClamperMaker(desc);
+            return o.mkChannel(desc, 
+                function() { return nodeVal; }, 
+                function(arg) { return (nodeVal = clamper(arg)); }
+            );
+        })();
+        newNode.desc = desc;
+        return newNode;
+    },
+    // Returns a conf node based on node from the metaConf variables section
+    "mkNode":           function mkNode(nodeDesc) {
+        var desc = {};
+        // come up with a better sieving algorithm so you don't have to do this.
+        nodeDesc.keys().forEach(function(k) {
+            desc[k] = nodeDesc[k];
+        });
+        if (typeof(desc.type) !== "string") {
+            throw TypeError("node type is not a string", nodeDesc, desc);
+        }
+        var newNode;
+        if (desc.type === "compound") {
+            // If we're a compound node, recurse down "variables"
+            var nodeVal = {};
+            desc.variables.keys().forEach(function(nodeKey) {
+                nodeVal[nodeKey] = mkNode(desc.variables[nodeKey]);
+            });
+            newNode = mkRawChannel(desc, function() {
+                return nodeVal;
+            }, null);
+            newNode.desc = desc;
+        } else {
+            switch(nodeDesc.type) {
+                case "float":
+                    return o.mkFloatNode(desc);
+                    break;
+                default:
+                    throw TypeError("Can't create a node of type" + nodeDesc.type);
+                    break;
+            }
+        }
+        return newNode;
+    },
+    "connect":          function(a, b, wire) {
         if (wire.a_b && wire.b_a) {
             a.registerListener(function(val, tryVal, node) {
                 b(val);

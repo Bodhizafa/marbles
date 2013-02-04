@@ -3,8 +3,8 @@
 <title></title>
 <script src="../js/jquery-1.6.2.min.js"></script>
 <script src="../js/gl-matrix-min.js"></script>
+<script src="./util.js"></script>
 <script src="./marbles.js"></script>
-<script src="./mbutils.js"></script>
 <script type="text/javascript">
 "use strict";
 window.requestAnimationFrame = 
@@ -45,137 +45,46 @@ var Multifinish = function() {
         }
     }
 }
-var conf;
-$(document).ready(function(e) {
-    var metaConf = {
-        "type": "root",
-        "variables": {
-            "mvMatrixTranslate" : {
-                "type": "compound",
-                "variables": {
-                    "X":    {
-                        "type":    "float",
-                         "dflt":    -30},
-                    "Y":    {
-                        "type":    "float",
-                        "dflt":    -30},
-                    "Z":    {
-                        "type":    "float",
-                        "dflt":    -30},
-                }
-            },
-            "mvMatrixRotate" : {
-                "type": "compound",
-                "variables": {
-                    "Pitch": {
-                        "type":"float",
-                        "dflt": 0.75,
-                    },
-                    "Yaw": {
-                        "type":"float",
-                        "dflt": -0.12,
-                    }
-                }
-            },
-            "cursor": {
-                "type": "compound",
-                "variables": {
-                    "translate": {
-                        "type": "compound",
-                        "variables": {
-                            "X": {
-                                "type":"int",
-                                "dflt": 0,
-                                "min": 0,
-
-                                "max": 15,
-                                "step": 1
-                            },
-                            "Y": {
-                                "type":"int",
-                                "dflt": 0,
-                                "min": 0,
-                                "max": 15,
-                                "step": 1
-                            }, 
-                            "Z": {
-                                "type":"int",
-                                "dflt": 0,
-                                "min": 0,
-                                "max": 15,
-                                "step": 1
-                            }
-                        }
-                    },
-                    "color": {
-                        "type": "compound",
-                        "variables": {
-                            "R": {
-                                "type":"int",
-                                "dflt": 0,
-                                "min": 0,
-                                "max": 15,
-                                "step": 1
-                            },
-                            "G": {
-                                "type":"int",
-                                "dflt": 15,
-                                "min": 0,
-                                "max": 15,
-                                "step": 1
-                            },
-                            "B": {
-                                "type":"int",
-                                "dflt": 15,
-                                "min": 0,
-                                "max": 15,
-                                "step": 1
-                            }
-                        }
-                    }
-                }
-            }
+var flt = {
+    "type": "float",
+    "dflt": 4.5,
+}
+var flt2 = {
+    "type": "float",
+    "dflt": 4.5,
+    "max":  7,
+    "min":  1
+}
+var flt3 = {
+    "type": "float",
+    "dflt": 4.5,
+    "min":  1
+}
+var flt4 = {
+    "type": "float",
+    "dflt": 4.5,
+    "max":  7,
+}
+var cp1 = {
+    "type": "compound",
+    "variables":    {
+        "f1": {
+            "type": "float",
+            "max": 10,
+            "dflt": 0
+        },
+        "f2": {
+            "type": "float",
+            "min": 5,
+            "dflt": 2
         }
-    };
-    var controls = [{
-        "type": "Knob",
-        "property": "mvMatrixTranslate.X",
-        "desc": {
-        }
-    },{
-        "type": "Knob",
-        "property": "mvMatrixTranslate.Y",
-        "desc": {
-        }
-    },{
-        "type": "Knob", 
-        "property": "mvMatrixTranslate.Z",
-        "desc": {
-        }
-    }];
-    conf = o.mkNode(metaConf);
-    controls.forEach(function(conDesc) {
-        console.log("dealing with", conDesc);
-        var treeStack = conDesc.property.split(".").reverse();
-        var prop = conf;
-        while(treeStack.length >= 1) {
-            prop = prop()[treeStack.pop()];
-        };
-        var obj;
-        obj = oU["mk" + conDesc.type](conDesc.desc);
-        $conCon.append(obj.element);
-        o.connect(obj.node, prop, {
-            "a-b": function(a) {
-                return (a);
-            },
-            "b-a": function(b) {
-                return b;
-            }
-        })
-    });
-    $conCon.addClass("debug").appendTo("#everything");
-});
-$(document)
+    }
+}
+var fltn1 = o.mkNode(flt);
+var fltn2 = o.mkNode(flt2);
+var fltn3 = o.mkNode(flt3);
+var fltn4 = o.mkNode(flt4);
+var cpn1 = o.mkNode(cp1);
 </script>
 </head>
 <style type="text/css">
