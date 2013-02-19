@@ -21,7 +21,6 @@ if (typeof Object.create !== 'function') {
         return new F();
     }
 }
-var dbg = {};
 var conf = {};
 var Multifinish = function() {
     var count = null;
@@ -45,46 +44,110 @@ var Multifinish = function() {
         }
     }
 }
-var flt = {
-    "type": "float",
-    "dflt": 4.5,
-}
-var flt2 = {
-    "type": "float",
-    "dflt": 4.5,
-    "max":  7,
-    "min":  1
-}
-var flt3 = {
-    "type": "float",
-    "dflt": 4.5,
-    "min":  1
-}
-var flt4 = {
-    "type": "float",
-    "dflt": 4.5,
-    "max":  7,
-}
-var cp1 = {
-    "type": "compound",
-    "variables":    {
-        "f1": {
-            "type": "float",
-            "max": 10,
-            "dflt": 0
-        },
-        "f2": {
-            "type": "float",
-            "min": 5,
-            "dflt": 2
+var test = {};
+$(document).ready(function(e) {
+    // Float node tests
+    console.log("testing floats");
+    test.flt1 = {
+        "dflt": 4.5,
+    };
+    test.flt2 = {
+        "dflt": 4.5,
+        "max":  7,
+        "min":  1
+    };
+    test.flt3 = {
+        "dflt": 4.5,
+        "min":  1
+    };
+    test.flt4 = {
+        "dflt": 4.5,
+        "max":  7
+    };
+    test.fltn1 = o.mkNumberNode(test.flt1, "fltn1");
+    test.fltn2 = o.mkNumberNode(test.flt2, "fltn2");
+    test.fltn3 = o.mkNumberNode(test.flt3, "fltn3");
+    test.fltn4 = o.mkNumberNode(test.flt4, "fltn4");
+    if (test.fltn1() != 4.5) 
+        console.error("fail");
+    if (test.fltn1(10) != 10) 
+        console.error("fail");
+    if (test.fltn1() != 10) 
+        console.error("fail");
+
+    if (test.fltn2() != 4.5) 
+        console.error("fail");
+    if (test.fltn2(10) != 7) 
+        console.error("fail");
+    if (test.fltn2() != 7) 
+        console.error("fail");
+    if (test.fltn2(-10) != 1) 
+        console.error("fail");
+    if (test.fltn2() != 1) 
+        console.error("fail");
+
+    if (test.fltn3() != 4.5)
+        console.error("fail");
+    if (test.fltn3(10) != 10)
+        console.error("fail");
+    if (test.fltn3() != 10)
+        console.error("fail");
+    if (test.fltn3(-10) != 1)
+        console.error("fail");
+    if (test.fltn3() != 1)
+        console.error("fail");
+
+    if (test.fltn4() != 4.5)
+        console.error("fail");
+    if (test.fltn4(10) != 7)
+        console.error("fail");
+    if (test.fltn4() != 7)
+        console.error("fail");
+    if (test.fltn4(-10) != -10)
+        console.error("fail");
+    if (test.fltn4() != -10)
+        console.error("fail");
+
+    // Compound node tests
+    console.log("testing compounds");
+    test.cp1 = {
+        "variables":    {
+            "f1": {
+                "type": "number",
+                "dflt": 0
+            },
+            "f2": {
+                "type": "number",
+                "dflt": 2
+            }
         }
     }
-}
-var fltn1 = o.mkNode(flt);
-var fltn2 = o.mkNode(flt2);
-var fltn3 = o.mkNode(flt3);
-var fltn4 = o.mkNode(flt4);
-var cpn1 = o.mkNode(cp1);
+    test.cpn1 = o.mkCompoundNode(test.cp1);
+    if (test.cpn1().f1() != 0)
+        console.error("fail");
+    if (test.cpn1().f1(10) != 10)
+        console.error("fail");
+    if (test.cpn1().f2(11) != 11)
+        console.error("fail");
+    if (test.cpn1().f1() != 10)
+        console.error("fail");
+    if (test.cpn1().f2() != 11)
+        console.error("fail");
+    test.threw = false;
+    try {
+        test.cpn1(2);
+    } catch (e) {
+        test.threw = true;
+    }
+    if (!test.threw)
+        console.error("fail");
+    test.fltn2.registerListener(function() {
+        console.log("fltn2", arguments);
+    });
+        
+    // Connection tests
+    o.connectProportional(test.fltn1, test.fltn3);
+});
 </script>
 </head>
 <style type="text/css">
@@ -94,20 +157,13 @@ body {
     margin: 0;
     text-align: center;
 }
-
-.scrollWheelSelected {
-    border: 2px solid red;
-}
-
 .debug {
 }
-
 .container {
     width: 100%;
     height: 100%;
     background-color: #333;
 }
-
 #everything {
     padding-bottom: 300px;
     padding-top: 300px;
