@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<head>
+<title></title>
+<script src="https://code.jquery.com/jquery-2.1.3.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.1.0/gl-matrix.js"></script>
+<script src="./util.js"></script>
+<script type="text/javascript"> 
+"use strict";
+window.requestAnimationFrame = 
+    window.requestAnimationFrame || 
+    window.mozRequestAnimationFrame ||  
+    window.webkitRequestAnimationFrame || 
+    window.msRequestAnimationFrame;
+window.URL = window.URL ||
+             window.webkitURL
+
+var PolarPoint = Class({"R": 0, "T": 0}, {});
+var CartPoint = Class({"X": 0, "Y": 0}, 
+    {"polarize": function() {
+        return PolarPoint({
+            "R": Math.sqrt(this.X * this.X + this.Y * this.Y), 
+            "T": Math.atan2(this.Y, this.X)});
+        }});
+
+var cp1 = CartPoint({"X": 10, "Y": 10});
+var pp1 = cp1.polarize();
+console.log(cp1, pp1);
+</script>
+</head>
+<style type="text/css">
+body {
+    background-color: #00f;
+    color: #00f;
+    margin: 0;
+    text-align: center;
+}
+.debug {
+}
+.container {
+    width: 100%;
+    height: 100%;
+    background-color: #333;
+}
+#everything {
+    padding-bottom: 300px;
+    padding-top: 300px;
+}
+</style>
+<body>
+<div id="everything" class="container">
+.THE WAY OF THE PAST.
+</div>
+</body>
+</html>
