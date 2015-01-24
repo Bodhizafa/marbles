@@ -1,15 +1,19 @@
 "use strict";
-if (Math.EPSILON === undefined) {
-    Math.EPSILON = 0.0000001;
-}
-var UID = (function() {
+var EPSILON = Number.EPSILON;
+
+// Make a name
+var make_uid = (function() {
     var cur = 0;
     return function() {
         return cur++;
     }
 })();
 
-var mesh = function(A, B) {
+
+// Sieve A through B, 
+// Produces an object O such that for each key in B, 
+//   O[key] is A[key] if key is in a, else B[key]
+var sieve = function(A, B) {
     var ret = {}
     Object.keys(B).forEach(function(k) {
         ret[k] = A[k] === undefined ? B[k] : A[k]
@@ -25,7 +29,7 @@ var Class = (function(defaults, methods, constructor) {
     }
     Object.freeze(methods);
     return function(desc) {
-        var props = mesh(desc, defaults);
+        var props = sieve(desc, defaults);
         var ret; // becomes this
         var privates = {};
         var proto = Object.create(null);
@@ -44,7 +48,7 @@ var Class = (function(defaults, methods, constructor) {
                 arguments[arguments.length] = privates;
                 return functor.apply(ret, arguments);
             }
-            ret.prototype = proto; // __proto__?
+            ret.__proto__ = proto;  // XXX probably not a great idea
         } else {
             ret = Object.create(proto, props);
         }
