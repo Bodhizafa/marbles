@@ -9,6 +9,10 @@ var make_uid = (function() {
     }
 })();
 
+var random_color = function() {
+    return "#" + (Math.floor(Math.random()*0x1000)).toString(16);
+}
+
 
 // Sieve A through B, 
 // Produces an object O such that for each key in B, 
@@ -43,6 +47,13 @@ var Class = (function(defaults, methods, constructor) {
             }
         });
         Object.freeze(proto);
+        var propsDesc = {};
+        Object.keys(props).forEach(function(key) {
+            propsDesc[key] = {
+                "value": props[key],
+                "writable": true
+            }
+        });
         if (functor) {
             ret = function() {
                 arguments[arguments.length] = privates;
@@ -50,7 +61,7 @@ var Class = (function(defaults, methods, constructor) {
             }
             ret.__proto__ = proto;  // XXX probably not a great idea
         } else {
-            ret = Object.create(proto, props);
+            ret = Object.create(proto, propsDesc);
         }
         if (constructor) {
             constructor.call(ret, privates);

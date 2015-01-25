@@ -6,22 +6,81 @@
 <script src="./util.js"></script>
 <script type="text/javascript"> 
 "use strict";
+// A Bucket of tests has a name and is a list of functions, 
+// each of which is passed a pass() and fail() continuation.
 
-var PolarPoint = Class({"R": 0, "T": 0}, {});
-var CartPoint =  Class({"X": 0, "Y": 0}, 
-    {"polarize": function() {
-        return PolarPoint({
-            "R": this.magnitude(),
-            "T": Math.atan2(this.Y, this.X)
-        });
-    }, "magnitude": function() {
-        return Math.sqrt(this.X * this.X + this.Y * this.Y)
-    }
+var run_tests = function(bucketName, tests) {
+    var nTests = tests.length;
+    console.log("Running", bucketName, "of", nTests);
+    var $bucket = $('<div class="bucket"></div>');
+    $bucket.append('<span class="passed bin"></span><span class="failed bin"></span><span class="undone bin"></span>');
+    $("#everything").append($bucket);
+    console.log($("#everything"), $bucket);
+    tests.forEach(function(test, idx) {
+        var $sliver = $('<div class="sliver"></div>')
+            .addClass("sliver")
+            .css("background-color", random_color())
+            .css("width", (100.0 / nTests) + "%");
+        $sliver.appendTo($bucket.find(".undone"));
+        
+        var pass = function() {
+            $sliver.appendTo($bucket.find(".passed"));
+            console.log(bucketName + "[" + idx + "] PASSED");
+        }
+        var fail = function(msg) {
+            $sliver.appendTo($bucket.find(".failed"));
+            console.error(bucketName + "[" + idx + "] FAILED", msg);
+        }
+        try {
+            test(pass, fail);
+        } catch (e) {
+            fail(e);
+        }
     });
+}
+</script> 
+<script type="text/javascript"> 
+"use strict";
+$(document).ready(function(e) {
+    // Fun tests
+    run_tests("Testing Testing", function(n, secs) {
+        var tests = [];
+        for(var i = 0; i < n; i++) {
+            tests[i] = (function(i) {
+                return (function(pass, fail) {
+                    var myI = i;
+                    if (i <= (n / 2)) {
+                        window.setTimeout(pass, 1000.0  * i / n * secs)
+                    } else {
+                        window.setTimeout(fail, 1000.0  * i / n * secs)
+                    }
+                })
+            })(n - i);
+        }
+        return tests;
+    }(5, 3));
 
-var cp1 = CartPoint({"X": 10, "Y": 10});
-var pp1 = cp1.polarize();
-console.log(cp1, pp1);
+    // Util tests
+    var CartPoint =  Class({"X": 0, "Y": 0}, 
+        {"polarize": function() {
+            return PolarPoint({
+                "R": this.magnitude(),
+                "T": Math.atan2(this.Y, this.X)
+            });
+        }, "magnitude": function() {
+            return Math.sqrt(this.X * this.X + this.Y * this.Y)
+        }
+    });
+    run_tests("Class system", [
+        function(pass, fail) {
+            var cp = CartPoint({"X": 10, "Y": 10});
+            if (cp.X != 10) fail();
+            if (cp.Y != 10) fail();
+            pass();
+        }
+    ]);
+
+});
 </script>
 </head>
 <style type="text/css">
@@ -32,12 +91,42 @@ body {
     text-align: center;
     font-family: sans-serif;
 }
+.bucket {
+    border: 1px solid #FFF;
+    background-color: #000;
+}
+.bucket .sliver {
+    border-bottom-width: 12px;
+    border-bottom-style: solid;
+    margin: 0;
+    padding: 0;
+}
+.passed .sliver {
+    border-bottom-color: #0F0 !important;
+}
+.failed .sliver {
+    border-bottom-color: #F00
+}
+.undone .sliver {
+    border-bottom-color: #00F;
+}
+.sliver {
+    background-color: #eee;
+    display: inline-block;
+    margin: 0;
+    padding: 0;
+    width: 0;
+    height: 32pt;
+}
 #everything {
+}
+h4 {
+    color: #F0F;
 }
 </style>
 <body>
+<h4>.:THE WAY OF THE FUTURE:.</h4>
 <div id="everything" class="container">
-.THE WAY OF THE FUTURE.
 </div>
 </body>
 </html>
