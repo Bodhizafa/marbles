@@ -3,6 +3,7 @@
 <title></title>
 <script src="https://code.jquery.com/jquery-2.1.3.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.1.0/gl-matrix.js"></script>
+<script src="./marbles.js"></script>
 <script src="./util.js"></script>
 <script type="text/javascript"> 
 "use strict";
@@ -31,11 +32,7 @@ var run_tests = function(bucketName, tests) {
             $sliver.appendTo($bucket.find(".failed"));
             console.error(bucketName + "[" + idx + "] FAILED", msg);
         }
-        try {
-            test(pass, fail);
-        } catch (e) {
-            fail(e);
-        }
+        test(pass, fail);
     });
 }
 </script> 
@@ -48,34 +45,79 @@ $(document).ready(function(e) {
         for(var i = 0; i < n; i++) {
             tests[i] = (function(i) {
                 return (function(pass, fail) {
-                    var myI = i;
-                    if (i <= (n / 2)) {
-                        window.setTimeout(pass, 1000.0  * i / n * secs)
-                    } else {
-                        window.setTimeout(fail, 1000.0  * i / n * secs)
-                    }
+                    window.setTimeout(pass, secs - 1000.0  * i / n * secs)
                 })
             })(n - i);
         }
         return tests;
-    }(5, 3));
+    }(5, 5));
 
     // Util tests
-    var CartPoint =  Class({"X": 0, "Y": 0}, 
-        {"polarize": function() {
-            return PolarPoint({
-                "R": this.magnitude(),
-                "T": Math.atan2(this.Y, this.X)
-            });
-        }, "magnitude": function() {
-            return Math.sqrt(this.X * this.X + this.Y * this.Y)
-        }
-    });
     run_tests("Class system", [
         function(pass, fail) {
+            // Let's make a functor!... After this git commit.
+        }, function(pass, fail) {
+            // Try a test with two properties, a methods, and no other magic
+            var CartPoint = Class(
+                // Properties
+                {"X": 0, "Y": 0}, 
+                // Methods
+                {  "magnitude": function(priv) {
+                    return Math.sqrt(this.X * this.X + this.Y * this.Y);
+                }}
+                // No Constructor
+            );
             var cp = CartPoint({"X": 10, "Y": 10});
             if (cp.X != 10) fail();
             if (cp.Y != 10) fail();
+            // Ensure we have no two enumerable properties (X and Y)
+            var props = [];
+            Object.keys(cp).forEach(function(k) {
+                props.push(k);
+            });
+            if (props.length != 2) fail();
+            // In this case, our prototype should have 3, (X, Y, magnitude)
+            props = [];
+            for (var k in cp) {
+                props.push(k);
+            }
+            if (props.length != 3) fail();
+            if (!close_enough(cp.magnitude(), 14.1421, 0.0001)) fail();
+            pass();
+        }, function(pass, fail) {
+            // Test as much as we can with the most boring object possible.
+            var constructorThis = null;
+            var Boilerplate = Class(
+                // Properties
+                {},
+                // Methods
+                {},
+                // Constructor
+                function(priv) {
+                    constructorThis = this;
+                }
+            )
+            // Make sure that 'this' is correct in constructors 
+            var b = Boilerplate();
+            if (b !== constructorThis) fail();
+            // Make sure we can't add properties willy-nilly
+            try {
+                b.berf = "berf";
+                fail() // We should throw in the line above.
+            } catch (e) {
+            }
+            // Ensure we have no own enumerable properties
+            var props = [];
+            Object.keys(b).forEach(function(k) {
+                props.push(k);
+            });
+            if (props.length > 0) fail();
+            // In this case, our prototype shouldn't have any enumerable properties either
+            props = [];
+            for (var k in b) {
+                props.push(k);
+            }
+            if (props.length > 0) fail();
             pass();
         }
     ]);

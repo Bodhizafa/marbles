@@ -13,6 +13,11 @@ var random_color = function() {
     return "#" + (Math.floor(Math.random()*0x1000)).toString(16);
 }
 
+var close_enough = function(a, b, eps) {
+    if (eps === undefined) eps = EPSILON;
+    return Math.abs(a - b) <= eps;
+}
+
 
 // Sieve A through B, 
 // Produces an object O such that for each key in B, 
@@ -25,7 +30,7 @@ var sieve = function(A, B) {
     return ret;
 }
 
-var Class = (function(defaults, methods, constructor) {
+var Class = (function(defaults, methods, constructor, properties) {
     var functor;
     if (methods[""] !== undefined) {
         functor = methods[""];
@@ -49,9 +54,15 @@ var Class = (function(defaults, methods, constructor) {
         Object.freeze(proto);
         var propsDesc = {};
         Object.keys(props).forEach(function(key) {
-            propsDesc[key] = {
-                "value": props[key],
-                "writable": true
+            if (properties and properties[key]) {
+                propsDesc[key] = properties[key];
+                if (propsDesc[key].value) throw "Can't specify value in properties. Use defaults.";
+                propsDesc[key].value = props[key];
+            } else {
+                propsDesc[key] = {
+                    "value": props[key],
+                    "writable": true
+                }
             }
         });
         if (functor) {
@@ -60,6 +71,7 @@ var Class = (function(defaults, methods, constructor) {
                 return functor.apply(ret, arguments);
             }
             ret.__proto__ = proto;  // XXX probably not a great idea
+            Object.defineProperties(ret, props);
         } else {
             ret = Object.create(proto, propsDesc);
         }
