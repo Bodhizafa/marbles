@@ -55,7 +55,149 @@ $(document).ready(function(e) {
     // Util tests
     run_tests("Class system", [
         function(pass, fail) {
-            // Let's make a functor!... After this git commit.
+            // Let's get trickier with functors
+            var ProtoMarble = Class(
+                // Properties
+                {
+                    "type": "basic",
+                },
+                // Methods
+                { "": function(priv, arg) {
+                    if (arg === undefined) {
+                        // get
+                        return priv.value;
+                    } else {
+                        // set
+                        var newVal = priv.constraint.call(this, arg);
+                        var oldVal = priv.value;
+                        if (newVal != oldVal) {
+                            priv.value = newVal;
+                            var that = this;
+                            priv.listeners.forEach(function(listener) {
+                                listener.call(that, newVal, oldVal);
+                            });
+                            return newVal;
+                        } else {
+                            return priv.value;
+                        }
+                    }
+                }, "addListener": function(priv, listener) {
+                    priv.listeners.push(listener);
+                    
+                }, "subtractListener": function(priv, listener) {
+                    var idx = priv.listeners.indexOf(listener);
+                    if (idx == -1) throw ["Unknown listener",  listener];
+                    delete priv.listeners[idx];
+                } },
+                // Constructor
+                function(priv) {
+                    priv.listeners = [];
+                    priv.value = 0;
+                    priv.constraint = function(val) {
+                        if (val > 5) return 5;
+                        else return val;
+                    };
+                },
+                // Properties
+                {"type": {"writable": false}}
+            );
+            var pm = ProtoMarble();
+            // Make sure accessors work
+            if (pm() != 0) fail();
+            if (pm(4) != 4) fail();
+            if (pm() != 4) fail();
+            if (pm(9) != 5) fail(); 
+            if (pm() != 5) fail();
+            // Make sure listeners work
+            var lCalls = [];
+            var l = function(newVal, oldVal) {
+                lCalls.push(newVal);
+            }
+            var l2Calls = [];
+            var l2 = function(newVal, oldVal) {
+                l2Calls.push(newVal);
+            }
+            pm.addListener(l);
+            if (pm(0) != 0) fail(); // 1, 0 lcalls, l2calls
+            pm.addListener(l2);
+            if (pm(9) != 5) fail(); // 2, 1
+            if (pm(4) != 4) fail(); // 3, 2
+            if (lCalls[0] != 0) fail();
+            if (lCalls[1] != 5) fail();
+            if (lCalls[2] != 4) fail();
+            if (lCalls.length != 3) fail();
+            if (l2Calls[0] != 5) fail();
+            if (l2Calls[1] != 4) fail();
+            if (l2Calls.length != 2) fail();
+            try {
+                pm.subtractListener("ferve");
+                fail();
+            } catch(e) {};
+            pm.subtractListener(l);
+            if (pm(1) != 1) fail(); // 3, 3
+            if (pm(2) != 2) fail(); // 3, 4
+            if (lCalls[0] != 0) fail();
+            if (lCalls[1] != 5) fail();
+            if (lCalls[2] != 4) fail();
+            if (lCalls.length != 3) fail;
+            if (l2Calls[0] != 5) fail();
+            if (l2Calls[1] != 4) fail();
+            if (l2Calls[2] != 1) fail();
+            if (l2Calls[3] != 2) fail();
+            if (l2Calls.length != 4) fail();
+            pass();
+        }, 
+        function(pass, fail) {
+            // Let's make a functor!
+            var getterThis;
+            var Thingy = Class(
+                // Properties
+                {"A": 0, "B": null}, 
+                // Methods
+                {  "": function(priv, arg) {
+                    priv.calls.push(arg)
+                    if(arg !== undefined) {
+                        return arg + 5
+                    } else {
+                        return this.A + this.B;
+                    }
+                }, "calls": function(priv) {
+                    return priv.calls;
+                }}, 
+                // Constructor
+                (function(priv) {
+                    priv.calls = [];
+                }),
+                // Properties
+                {"B": {"enumerable": true, 
+                       "get": function() {getterThis = this; return 5;}}}
+            );
+            var t = Thingy();
+            if (t.B != 5) fail();
+            if (getterThis !== t) fail();
+            if (t.calls() != 0) fail();
+            if (t() != 5) fail();
+            if (t(5) != 10) fail();
+            var calls = t.calls();
+            if (calls[0] != undefined) fail();
+            if (calls[1] != 5) fail();
+            try {
+                t.B = 10;
+                fail();
+            } catch(e) {};
+            // Ensure we have no two enumerable properties (A and B)
+            var props = [];
+            Object.keys(t).forEach(function(k) {
+                props.push(k);
+            });
+            if (props.length != 2) fail();
+            // In this case, our prototype should have 3, (A, B, calls)
+            props = [];
+            for (var k in t) {
+                props.push(k);
+            }
+            if (props.length != 3) fail();
+            pass();
         }, function(pass, fail) {
             // Try a test with two properties, a methods, and no other magic
             var CartPoint = Class(
@@ -67,7 +209,13 @@ $(document).ready(function(e) {
                 }}
                 // No Constructor
             );
-            var cp = CartPoint({"X": 10, "Y": 10});
+            var cp = CartPoint();
+            if (cp.X != 0) fail();
+            if (cp.Y != 0) fail();
+            cp = CartPoint({"Y": 10});
+            if (cp.X != 0) fail();
+            if (cp.Y != 10) fail();
+            cp = CartPoint({"X": 10, "Y": 10});
             if (cp.X != 10) fail();
             if (cp.Y != 10) fail();
             // Ensure we have no two enumerable properties (X and Y)
