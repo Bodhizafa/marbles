@@ -9,9 +9,9 @@ var PrimitiveMarble = Class(
         } else {
             arg = priv.constraint(arg);
             var oldVal = priv.value;
-            priv.value = arg;
-            if (priv.compare.call(this, arg, priv.value)) {
-                priv.yell.call(this, priv.value, oldVal);
+            if (!priv.compare.call(this, arg, priv.value)) {
+                priv.value = arg;
+                priv.yell.call(this, oldVal, priv.value);
             }
         }
     }, "addListener": function(priv, listener) {
@@ -22,7 +22,7 @@ var PrimitiveMarble = Class(
             if (l === listener) {
                 found_idx = idx;
             }
-        })
+        });
         delete priv.listeners[found_idx];
     }},
     // Constructor

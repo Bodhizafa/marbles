@@ -52,13 +52,26 @@ $(document).ready(function(e) {
         return tests;
     }(5, 5));
 
-    run_tests('Marbles', [
+    run_tests('Primitive Marbles', [
+        // Let's see if listeners work
+        function(pass, fail) {
+            var m = PrimitiveMarble(),
+            m('100,000');
+            m.addListener(fu
+            pass();
+            
+        }, 
         // Let's make a primitive marble
         function(pass, fail) {
-            var m = PrimitiveMarble();
+            var m = PrimitiveMarble(),
+                f = Math.sqrt(2);
             if (m() !== undefined) fail();
             m('100,000');
             if (m() !== '100,000') fail();
+            m(4);
+            if (m() !== 4) fail();
+            m(f);
+            if (m() !== f) fail();
             pass();
         }
     ])
