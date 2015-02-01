@@ -30,21 +30,20 @@ var sieve = function(A, B) {
     return ret;
 }
 
-var Class = (function(defaults, methods, constructor, properties) {
+var Class = (function(properties, methods, constructor, descriptors) {
     var functor;
     if (methods[""] !== undefined) {
         functor = methods[""];
         delete methods[""];
     }
     Object.freeze(methods);
-    return function(desc) {
-        var ret; // becomes this
-        var privates = {};
-        // Make a prototype
-        var proto = Object.create(null);
+    var ret = function(desc) { // If you deliberately shadow, you can't accidentally shadow
+        var ret, // becomes this
+            privates = {}, proto = Object.create(null), // Becomes the prototype 
+            props = sieve(desc, properties), // Instance variable values by property name
+            propsDesc = {}; // Becomes property 
+        // Construct the prototype (methods with privates curried in by method name)
         Object.keys(methods).forEach(function(k) {
-            if (k == "") return; // functors don't go in props
-
             proto[k] = function() {
                 if (arguments.length > 0) {
                     var args = Array.prototype.slice.call(arguments)
@@ -53,25 +52,22 @@ var Class = (function(defaults, methods, constructor, properties) {
                 } else {
                     return methods[k].call(ret, privates);
                 }
-            }
+            };
         });
         Object.freeze(proto);
-        // Make the property descriptors
-        var props = sieve(desc, defaults);
-        var propsDesc = {};
-        Object.keys(props).forEach(function(key) {
-            if (properties && properties[key]) {
-                propsDesc[key] = properties[key];
-                if (propsDesc[key].value) throw "Can't specify value in properties. Use defaults.";
-                // If getters and setters are set, make sure that value is null and don't set value in the descriptor
-                if (properties[key].get || properties[key].set) {
-                    if (props[key] !== null) throw "Magic properties must have their defaults entry null";
+        Object.keys(props).forEach(function(k) {
+            if (descriptors && descriptors[k]) {
+                propsDesc[k] = descriptors[k];
+                if (propsDesc[k].value) throw "Can't specify value in descriptors, use properties.";
+                // You can't have a property value if there are getters and setters
+                if (descriptors[k].get || descriptors[k].set) {
+                    if (props[k] !== null) throw "Magic properties must have their properties entry null";
                 } else {
-                    propsDesc[key].value = props[key];
+                    propsDesc[k].value = props[k];
                 }
             } else {
-                propsDesc[key] = {
-                    "value": props[key],
+                propsDesc[k] = {
+                    "value": props[k],
                     "writable": true,
                     "enumerable": true,
                 }
@@ -81,8 +77,8 @@ var Class = (function(defaults, methods, constructor, properties) {
         if (functor) {
             ret = function() {
                 if (arguments.length > 0) {
-                    var args = Array.prototype.slice.call(arguments)
-                    args.unshift(privates)
+                    var args = Array.prototype.slice.call(arguments);
+                    args.unshift(privates);
                     return functor.apply(ret, args);
                 } else {
                     return functor.call(ret, privates);
@@ -102,4 +98,5 @@ var Class = (function(defaults, methods, constructor, properties) {
         Object.seal(privates);
         return ret;
     }
+    return ret;
 });

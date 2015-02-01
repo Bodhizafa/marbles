@@ -8,30 +8,32 @@
 <script type="text/javascript"> 
 "use strict";
 // A Bucket of tests has a name and is a list of functions, 
-// each of which is passed a pass() and fail() continuation.
+// each of which is passed a pass() and fail() continuation.  
+// Each function is represented by a sliver in the DOM
 
 var run_tests = function(bucketName, tests) {
-    var nTests = tests.length;
-    //console.log('Running', bucketName, 'of', nTests);
-    var $bucket = $('<div class="bucket"></div>');
+    var nTests = tests.length,
+        $bucket = $('<div class="bucket"></div>');
     $bucket.append('<span class="passed bin"></span><span class="failed bin"></span><span class="undone bin"></span>');
     $('#everything').append($bucket);
-    //console.log($('#everything'), $bucket);
+    console.log('Running', bucketName, 'of', nTests);
     tests.forEach(function(test, idx) {
         var $sliver = $('<div class="sliver"></div>')
             .addClass('sliver')
             .css('background-color', random_color())
             .css('width', (100.0 / nTests) + '%');
-        $sliver.appendTo($bucket.find('.undone'));
-        
         var pass = function() {
-            $sliver.appendTo($bucket.find('.passed'));
-            console.log(bucketName + '[' + idx + '] PASSED');
+            if ($sliver) {
+                $sliver.appendTo($bucket.find('.passed'));
+                console.log(bucketName + '[' + idx + '] PASSED');
+            }
         }
         var fail = function(msg) {
             $sliver.appendTo($bucket.find('.failed'));
             console.error(bucketName + '[' + idx + '] FAILED', msg);
+            $sliver = null;
         }
+        $sliver.appendTo($bucket.find('.undone'));
         test(pass, fail);
     });
 }
@@ -40,26 +42,100 @@ var run_tests = function(bucketName, tests) {
 "use strict";
 $(document).ready(function(e) {
     // Fun tests
-    run_tests('Testing Testing', function(n, secs) {
+    run_tests('Testing Testing', function(n, msecs) {
         var tests = [];
         for(var i = 0; i < n; i++) {
             tests[i] = (function(i) {
                 return (function(pass, fail) {
-                    window.setTimeout(pass, secs - 1000.0  * i / n * secs)
+                    window.setTimeout(pass, 1000.0  * i / n * msecs)
                 })
-            })(n - i);
+            })(i+1);
         }
         return tests;
     }(5, 5));
 
     run_tests('Primitive Marbles', [
+        // Let's see what happens when we make Array marbles
+        // XXX This is a test, not an example.
+        function(pass, fail) {
+            var m = PrimitiveMarble(),
+                arr1 = [],
+                arr2 = [],
+                c = [], // Stack of listener arguments arrays
+                l = function() { c.push(arguments); };
+            m(arr1);
+            m.addListener(l);
+            if (m() !== arr1) fail();
+            if (m() === arr2) fail();
+            m(arr1);
+            if (c.length !== 0) fail();
+            m(arr2);
+            if (c.length !== 1) fail();
+            arr2.push(1);
+            arr2.push(2);
+            if (m()[0] !== 1) fail();
+            m(arr2);
+            if (c.length !== 1) fail();
+            pass(); // I forgot what I was working on...
+        },
+        // Let's see what happens when we make object marbles
+        // XXX This is a test, not an example.
+        function(pass, fail) {
+            var m = PrimitiveMarble(),
+                obj = {'a': 4, 'b': 8},
+                obj2 = {'b': 8, 'a': 4},
+                c = [], // Stack of listener arguments arrays
+                l = function() { c.push(arguments); };
+            m(obj);
+            if (m().a !== 4) fail();
+            if (m() !== obj) fail();
+            if (m() === obj2) fail();
+            m(obj2);
+            if (m() !== obj2) fail();
+            if (m() === obj) fail();
+            m.addListener(l);
+            m(obj2);
+            if (c.length !== 0) fail();
+            obj2.c = 5;
+            if (m().c !== 5) fail();
+            m(obj2);
+            if (c.length !== 0) fail();
+            m(obj);
+            if (c[0][0] != obj) fail();
+            if (c[0][1] != obj2) fail();
+            if (m() !== obj) fail();
+            m(obj2);
+            if (c[1][0] != obj2) fail();
+            if (c[1][1] != obj) fail();
+            if (m() !== obj2) fail();
+            pass();
+        }, 
         // Let's see if listeners work
         function(pass, fail) {
             var m = PrimitiveMarble(),
-            m('100,000');
-            m.addListener(fu
+                s = "I'm just here so",
+                c = [], // Stack of listener arguments arrays
+                l = function(newVal, oldVal) { c.push({"n": newVal, "o": oldVal});};
+            m('0xC');
+            m.addListener(l);
+            m('0xC');
+            if (c.length !== 0) fail();
+            m('1100');
+            if (c.length !== 1) fail();
+            if (c[0].n !== '1100' || c[0].o !== '0xC') fail();
+            m('12');
+            if (c.length !== 2) fail();
+            if (c[1].n !== '12' || c[1].o !== '1100') fail();
+            m(12);
+            if (c.length !== 3) fail();
+            m.subtractListener(l);
+            m("I'm just here so I won't get fined");
+            if (c.length !== 3) fail();
+            m.addListener(l);
+            m(s + " I won't get fined");
+            if (c.length !== 3) fail();
+            m("1100");
             pass();
-            
         }, 
         // Let's make a primitive marble
         function(pass, fail) {
@@ -78,6 +154,39 @@ $(document).ready(function(e) {
 
     // Util tests
     run_tests('Class system', [
+        function(pass, fail) {
+            // Let's make getters and setters
+            var that,
+                c, 
+                C = Class(
+                    // Properties
+                    {"A": null},
+                    // Methods
+                    {},
+                    // Constructor
+                    function() {},
+                    // Descriptors
+                    {"A": {"get": function() {that = this; return 42;}}}
+                )
+            c = C();
+            if (c.A !== 42) fail();
+            if (that !== c) fail();
+            try {
+                var BROKEN = Class(
+                    // Properties
+                    {"A": 4},
+                    // Methods
+                    {},
+                    // Constructor
+                    function() {},
+                    // Descriptors
+                    {"A": {"get": function() {}, "set": function() {}}}
+                )
+                var b = BROKEN();
+                fail(); // We should throw cause A is both default 4 and magic
+            } catch (e) {};
+            pass();
+        },
         function(pass, fail) {
             // Let's get trickier with functors
             var ProtoMarble = Class(

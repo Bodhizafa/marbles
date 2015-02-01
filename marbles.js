@@ -7,11 +7,11 @@ var PrimitiveMarble = Class(
         if (arg === undefined) {
             return priv.value;
         } else {
-            arg = priv.constraint(arg);
             var oldVal = priv.value;
+            arg = priv.constraint(arg);
             if (!priv.compare.call(this, arg, priv.value)) {
                 priv.value = arg;
-                priv.yell.call(this, oldVal, priv.value);
+                priv.yell.call(this, priv.value, oldVal);
             }
         }
     }, "addListener": function(priv, listener) {
