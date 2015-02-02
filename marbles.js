@@ -42,4 +42,68 @@ var PrimitiveMarble = Class(
         };
     }
     // Descriptors
-)
+    ),
+    NumberMarble = PrimitiveMarble.SubClass(
+    // Properties
+    {
+        "dflt": 0,
+        "step": 0, // Gates radiate out from default at intervals of step
+        "max": Infinity,
+        "min": -Infinity
+    },
+    // Methods
+    {},
+    // Constructor 
+    function(priv) {
+        if (this.step && (this.max !== Infinity)) {
+            if (!close_enough((this.dflt + this.max) % this.step, 0)) {
+                throw "this.max does not appear to be on a gate.";
+            }
+        }
+        if (this.step && (this.min !== -Infinity)) {
+            if (!close_enough((this.dflt + this.min) % this.step, 0)) {
+                throw "this.min does not appear to be on a gate.";
+            }
+        }
+        if (step === 1 && this.dflt % 1 === 0) {
+            // Fast path for integers
+            if (!isInteger(this.max) && this.max !== Infinity) {
+                throw "Max is not an integer";
+            }
+            if (!isInteger(this.min) && this.min !== -Infinity) {
+                throw "Min is not an integer";
+            }
+            if (this.max === Infinity && this.min === -Infinity) {
+                priv.constraint = Math.round;
+            } else {
+                priv.constraint = function(newVal, oldVal) {
+                    return newVal >= this.max ? this.max : 
+                                                (newVal <= this.min ? this.min : 
+                                                                      Math.round(newVal));
+                }
+            }
+            // priv.compare comes okay from the superclass
+        } else {
+            priv.constraint = function(newVal, oldVal) {
+                var offset, // How far we are from a gate
+                    ret = newVal
+                ret = ret > this.max ? this.max : (ret < this.min ? this.min : ret);
+                if (this.step === 0) {
+                    return ret;
+                } else if (ret === oldVal) {
+                    return ret;
+                }
+                // XXX This is when you went to bed
+            };
+            priv.compare = function(newVal, oldVal) {
+                return newVal === oldVal || close_enough(newVal, oldVal);
+            }
+        }
+    },
+    // Descriptors
+    { // Allowing users to change these post-construction leads to weird cases. See MSDN.
+        "dflt": {"writable": false},
+        "step": {"writable": false},
+        "max": {"writable": false},
+        "min": {"writable": false}
+    });

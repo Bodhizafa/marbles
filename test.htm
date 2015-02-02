@@ -150,12 +150,117 @@ $(document).ready(function(e) {
             if (m() !== f) fail();
             pass();
         }
-    ])
+    ]);
 
     // Util tests
     run_tests('Class system', [
+        // Let's test method thisness
         function(pass, fail) {
-            // Let's make getters and setters
+            var that,
+                that2,
+                that3,
+                c, d, e,
+                C = Class({}, {"wobble": function(priv) { that = this }}),
+                D = C.SubClass({}, {"wibble": function(priv) { that2 = this }}),
+                E = D.SubClass({}, {"wobble": function(priv) { that3 = this }});
+
+            c = C();
+            if (that !== undefined) fail();
+            if (that2 !== undefined) fail();
+            if (that3 !== undefined) fail();
+            c.wobble();
+            if (that !== c) fail();
+            if (that2 !== undefined) fail();
+            if (that3 !== undefined) fail();
+            d = D();
+            d.wobble();
+            if (that !== d) fail();
+            if (that2 !== undefined) fail();
+            if (that3 !== undefined) fail();
+            d.wibble();
+            if (that !== d) fail();
+            if (that2 !== d) fail();
+            if (that3 !== undefined) fail();
+            e = E();
+            e.wobble();
+            if (that !== d) fail();
+            if (that2 !== d) fail();
+            if (that3 !== e) fail();
+            e.wibble();
+            if (that !== d) fail();
+            if (that2 !== e) fail();
+            if (that3 !== e) fail();
+            c.wobble();
+            if (that !== c) fail();
+            if (that2 !== e) fail();
+            if (that3 !== e) fail();
+            pass();
+        },
+        // Let's test constructor thisness
+        function(pass, fail) {
+            var that, 
+                that2,
+                c, d, 
+                C = Class({}, {}, function(priv) { that = this }),
+                D = C.SubClass({}, {}, function(priv) { that2 = this }),
+                c = C();
+
+            if (that !== c) fail();
+            if (that2 !== undefined) fail();
+            d = D();
+            if (that !== d) fail();
+            if (that2 !== d) fail();
+            pass()
+        },
+        // Let's override a property
+        function(pass, fail) {
+            var that,
+                C = Class(
+                    // Properties
+                    {"A": "A",
+                     "B": "B"},
+                    // Methods
+                    {},
+                    // Constructor
+                    function(priv) { priv.that = this;}
+                    // Descriptors
+                ),
+                D = C.SubClass({"A": "freeve"}),
+                E = D.SubClass({"B": "breeve"}),
+                d = D(),
+                c = C(),
+                e = E();
+            if (c.A !== 'A') fail();
+            if (c.B !== 'B') fail();
+            if (d.A !== 'freeve') fail();
+            if (d.B !== 'B') fail();
+            d.A = 'AA';
+            d.B = 'BB';
+            if (d.A !== 'AA') fail();
+            if (d.B !== 'BB') fail();
+            if (e.A !== 'freeve') fail();
+            if (e.B !== 'breeve') fail();
+            pass();
+        },
+        // Let's extend a property
+        function(pass, fail) {
+            var C = Class(
+                    // Properties
+                    {"A": "A"},
+                    // Methods
+                    {}
+                    // Constructor
+                    // Descriptors
+                ),
+                D = C.SubClass({"B": "7"}),
+                c = C(),
+                d = D();
+                if(c.B !== undefined) fail();
+                if(c.A !== 'A') fail();
+            pass();
+        },
+        // Let's make getters and setters
+        function(pass, fail) {
             var that,
                 c, 
                 C = Class(
@@ -172,6 +277,10 @@ $(document).ready(function(e) {
             if (c.A !== 42) fail();
             if (that !== c) fail();
             try {
+                c = C({"A": 8});
+                fail()
+            } catch(e) {};
+            try {
                 var BROKEN = Class(
                     // Properties
                     {"A": 4},
@@ -187,8 +296,8 @@ $(document).ready(function(e) {
             } catch (e) {};
             pass();
         },
+        // Let's get trickier with functors
         function(pass, fail) {
-            // Let's get trickier with functors
             var ProtoMarble = Class(
                 // Properties
                 {
@@ -280,8 +389,8 @@ $(document).ready(function(e) {
             if (l2Calls.length != 4) fail();
             pass();
         }, 
+        // Let's make a functor!
         function(pass, fail) {
-            // Let's make a functor!
             var getterThis;
             var Thingy = Class(
                 // Properties
@@ -331,8 +440,8 @@ $(document).ready(function(e) {
             }
             if (props.length != 3) fail();
             pass();
+        // Try a test with two properties, a methods, and no other magic
         }, function(pass, fail) {
-            // Try a test with two properties, a methods, and no other magic
             var CartPoint = Class(
                 // Properties
                 {'X': 0, 'Y': 0}, 
@@ -365,8 +474,8 @@ $(document).ready(function(e) {
             if (props.length != 3) fail();
             if (!close_enough(cp.magnitude(), 14.1421, 0.0001)) fail();
             pass();
+        // Test as much as we can with the most boring object possible.
         }, function(pass, fail) {
-            // Test as much as we can with the most boring object possible.
             var constructorThis = null;
             var Boilerplate = Class(
                 // Properties

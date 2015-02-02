@@ -18,85 +18,93 @@ var close_enough = function(a, b, eps) {
     return Math.abs(a - b) <= eps;
 }
 
-
-// Sieve A through B, 
-// Produces an object O such that for each key in B, 
-//   O[key] is A[key] if key is in a, else B[key]
-var sieve = function(A, B) {
-    var ret = {}
-    Object.keys(B).forEach(function(k) {
-        ret[k] = ((A === undefined) || (A[k] === undefined)) ? B[k] : A[k]
-    });
-    return ret;
-}
-
+// Arguments will be frozen, and may already be
 var Class = (function(properties, methods, constructor, descriptors) {
-    var functor;
-    if (methods[""] !== undefined) {
-        functor = methods[""];
-        delete methods[""];
+    var ret; // becomes the class constructor function
+    Object.freeze(properties);
+    if (methods !== undefined) Object.freeze(methods);
+    if (descriptors !== undefined) {
+        Object.keys(descriptors).forEach(function(k) {
+            if (descriptors[k].value !== undefined) throw "Descriptors may not specify value. Use properties";
+            if ((descriptors[k].get || descriptors[k].set) && (properties[k] !== null)) throw "Magic properties must be null in properties";
+            Object.freeze(descriptors[k]);
+        });
+        Object.freeze(descriptors);
     }
-    Object.freeze(methods);
-    var ret = function(desc) { // If you deliberately shadow, you can't accidentally shadow
-        var ret, // becomes this
-            privates = {}, proto = Object.create(null), // Becomes the prototype 
-            props = sieve(desc, properties), // Instance variable values by property name
+    ret = function(spec) {
+        var ret, // becomes this, If you deliberately shadow, you can't accidentally shadow
+            privs = {},
+            proto = Object.create(null), // Becomes the prototype 
             propsDesc = {}; // Becomes property 
-        // Construct the prototype (methods with privates curried in by method name)
-        Object.keys(methods).forEach(function(k) {
+        if (spec === undefined) spec = {};
+        // Construct the prototype (methods with privs curried in by method name)
+        if (methods !== undefined) Object.keys(methods).forEach(function(k) {
             proto[k] = function() {
                 if (arguments.length > 0) {
                     var args = Array.prototype.slice.call(arguments)
-                    args.unshift(privates)
+                    args.unshift(privs);
                     return methods[k].apply(ret, args);
                 } else {
-                    return methods[k].call(ret, privates);
+                    return methods[k].call(ret, privs);
                 }
             };
         });
-        Object.freeze(proto);
-        Object.keys(props).forEach(function(k) {
+        // Create a properties descriptor by merging spec and descriptors into propsDesc
+        Object.keys(properties).forEach(function(k) {
             if (descriptors && descriptors[k]) {
-                propsDesc[k] = descriptors[k];
-                if (propsDesc[k].value) throw "Can't specify value in descriptors, use properties.";
-                // You can't have a property value if there are getters and setters
-                if (descriptors[k].get || descriptors[k].set) {
-                    if (props[k] !== null) throw "Magic properties must have their properties entry null";
-                } else {
-                    propsDesc[k].value = props[k];
-                }
+                propsDesc[k] = {}
+                Object.keys(descriptors[k]).forEach(function(dk) { 
+                    propsDesc[k][dk] = descriptors[k][dk];
+                    if ((dk === "get" || dk === "set") && (spec[k] !== undefined)) throw "Magic properties must not be in spec";
+                });
             } else {
                 propsDesc[k] = {
-                    "value": props[k],
                     "writable": true,
                     "enumerable": true,
-                }
+                };
+            }
+            if (!(propsDesc[k].get || propsDesc[k].set)) {
+                propsDesc[k].value = spec[k] !== undefined ? spec[k] : properties[k];
             }
         });
         // Create the object, set prototype and attach properties
-        if (functor) {
-            ret = function() {
-                if (arguments.length > 0) {
-                    var args = Array.prototype.slice.call(arguments);
-                    args.unshift(privates);
-                    return functor.apply(ret, args);
-                } else {
-                    return functor.call(ret, privates);
-                }
-            }
+        if (proto[''] !== undefined) {
+            ret = proto[''];
+            delete proto[''];
             ret.__proto__ = proto;  // XXX probably not a great idea
             Object.defineProperties(ret, propsDesc);
         } else {
             ret = Object.create(proto, propsDesc);
         }
         // Call the constructor
-        if (constructor) {
-            constructor.call(ret, privates);
-        }
+        if (constructor) constructor.call(ret, privs);
         // Seal it up ans ship it out.
+        Object.freeze(proto);
+        Object.seal(privs);
         Object.seal(ret);
-        Object.seal(privates);
+        // Clean up our closure XXX I have no idea if this actually does anything.
+        proto = undefined;
+        propsDesc = undefined;
         return ret;
-    }
+    };
+    // Arguments will be mutated and frozen
+    ret.SubClass = function(scProperties, scMethods, scConstructor, scDescriptors) {
+        var c = function(privs) {
+            var args = Array.prototype.slice.call(arguments)
+            args.unshift(privs);
+            if (constructor) constructor.apply(this, args);
+            if (scConstructor) scConstructor.apply(this, args);
+        };
+        Object.keys(properties).forEach(function(k) {
+            if (!scProperties.hasOwnProperty(k)) scProperties[k] = properties[k];
+        });
+        if (scMethods) Object.keys(methods).forEach(function(k) {
+            if (!scMethods.hasOwnProperty(k)) scMethods[k] = methods[k];
+        });
+        if (scDescriptors && descriptors) Object.keys(descriptors).forEach(function(k) {
+            if (!scDescriptors.hasOwnProperty(k)) scMethods[k] = methods[k];
+        }); else if (descriptors) scDescriptors = descriptors;
+        return Class(scProperties, scMethods, c, scDescriptors);
+    };
     return ret;
 });
